@@ -5,9 +5,9 @@ from typing import cast
 
 import pytest
 
-from pytorch_lightning_template.train import train
-from pytorch_lightning_template.utils import read_yaml_config
-from pytorch_lightning_template.utils.typing import TrainConfig
+from jax_lightning_template.train import train
+from jax_lightning_template.utils import read_yaml_config
+from jax_lightning_template.utils.typing import TrainConfig
 
 
 @pytest.fixture

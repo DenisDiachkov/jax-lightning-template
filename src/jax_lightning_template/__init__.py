@@ -3,4 +3,4 @@
 
 from importlib.metadata import version
 
-__version__ = version("pytorch_lightning_template")
+__version__ = version("jax_lightning_template")

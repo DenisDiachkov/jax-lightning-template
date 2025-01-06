@@ -4,18 +4,18 @@ This file contains the implementation of the MultiCriterion class.
 
 from typing import Any, List
 
-import torch
+import equinox
 
 from ..utils import utils
 from ..utils.typing import CriterionConfig
 
 
-class MultiCriterion(torch.nn.Module):
+class MultiCriterion(equinox.Module):
     """
     This class represents a multi-criterion.
 
     Args:
-        criterions (List[CriterionConfig | str | torch.nn.Module]): The criterions.
+        criterions (List[CriterionConfig | str | equinox.nn.Module]): The criterions.
         criterion_weights (list | None): The weights of the criterions. Defaults to None.
         reduce (str): The reduction method. Defaults to "mean".
 
@@ -24,31 +24,29 @@ class MultiCriterion(torch.nn.Module):
 
     Examples:
         >>> criterions = [
-        ...     {"criterion": "torch.nn.CrossEntropyLoss", "criterion_params": {}},
-        ...     "torch.nn.MSELoss",
-        ...     torch.nn.L1Loss(),
+        ...     {"criterion": "equinox.nn.CrossEntropyLoss", "criterion_params": {}},
+        ...     "equinox.nn.MSELoss",
+        ...     equinox.nn.L1Loss(),
         ... ]
         >>> criterion_weights = [1, 2]
         >>> reduce = "mean"
-        >>> multi_criterion = MultiCriterion(criterions, criterion_weights, reduce)
+        >>> multi_criterion = EquinoxMultiCriterion(criterions, criterion_weights, reduce)
     """
+
+    criterions: List[equinox.Module]
+    criterion_weights: List[float]
+    reduce: str
 
     def __init__(
         self,
-        criterions: List[CriterionConfig | str | torch.nn.Module],
+        criterions: List[CriterionConfig | str | equinox.Module],
         criterion_weights: list | None = None,
         reduce: str = "mean",
     ):
         super().__init__()
-        self.criterions = torch.nn.ModuleList()
+        self.criterions = []
         for criterion in criterions:
             if isinstance(criterion, dict):
-                # Patch: Weight list -> torch.Tensor
-                if "weight" in criterion["criterion_params"]:
-                    criterion["criterion_params"]["weight"] = torch.Tensor(
-                        criterion["criterion_params"]["weight"]
-                    )
-
                 self.criterions.append(
                     utils.get_instance(
                         criterion["criterion"], criterion["criterion_params"]
@@ -56,7 +54,7 @@ class MultiCriterion(torch.nn.Module):
                 )
             elif isinstance(criterion, str):
                 self.criterions.append(utils.get_instance(criterion, {}))
-            elif isinstance(criterion, torch.nn.Module):
+            elif isinstance(criterion, equinox.Module):
                 self.criterions.append(criterion)
         self.criterion_weights = (
             criterion_weights
@@ -64,8 +62,12 @@ class MultiCriterion(torch.nn.Module):
             else [1] * len(self.criterions)
         )
         self.reduce = reduce
+        # assert all modules callable
+        assert all(
+            callable(criterion) for criterion in self.criterions
+        ), "All criterions must be callable."
 
-    def forward(self, x: Any, y: Any):
+    def __call__(self, x: Any, y: Any):
         """
         This function calculates the loss.
 
@@ -74,12 +76,12 @@ class MultiCriterion(torch.nn.Module):
             y (Any): The target.
 
         Returns:
-            torch.Tensor: The loss.
+            jax.numpy.ndarray: The loss.
         """
 
         losses = []
         for i, criterion in enumerate(self.criterions):
-            losses.append(criterion(x, y) * self.criterion_weights[i])
+            losses.append(criterion(x, y) * self.criterion_weights[i])  # type: ignore
         if self.reduce == "mean":
             return sum(losses) / len(losses)
         if self.reduce == "sum":

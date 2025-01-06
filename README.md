@@ -14,7 +14,7 @@ This repository provides a PyTorch Lightning-based training pipeline.
 
 ## Project Structure
 
-- `src/pytorch_lightning_template`: Python package.
+- `src/jax_lightning_template`: Python package.
   - `__init__.py`: Package initialization.
   - `__main__.py`: Main module logic.
   - `py.typed`: Marker file for PEP 561 typing.
@@ -62,11 +62,11 @@ Stick to git installation if you don't need CI/CD.
 
    1. Clone the repository:
       ```bash
-      git clone https://github.com/DenisDiachkov/pytorch-lightning-template.git
+      git clone https://github.com/DenisDiachkov/jax-lightning-template.git
       ```
    2. Navigate to the project directory:
       ```bash
-      cd pytorch-lightning-template
+      cd jax-lightning-template
       ```
    3. Install dependencies:
       ```bash
@@ -77,14 +77,14 @@ Stick to git installation if you don't need CI/CD.
 
   1. Install the package:
      ```bash
-     pip install pytorch-lightning-template --extra-index-url http://pypi-server/
+     pip install jax-lightning-template --extra-index-url http://pypi-server/
      ```
 
 - Installation from Docker
 
   1. Pull the Docker image:
      ```bash
-     docker pull docker-registry:80/pytorch_lightning_template:0.1.0
+     docker pull docker-registry:80/jax_lightning_template:0.1.0
      ```
    
 ### WanDB Setup
@@ -103,7 +103,7 @@ Stick to git installation if you don't need CI/CD.
 
 1. Run the package with a specified configuration file for training or testing:
    ```bash
-   python -m pytorch_lightning_template --cfg <path to config file>
+   python -m jax_lightning_template --cfg <path to config file>
    ```
 
 ### Training Configuration

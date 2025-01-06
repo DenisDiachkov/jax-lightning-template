@@ -10,12 +10,12 @@ import albumentations as A
 import numpy as np
 import torchvision
 from albumentations.pytorch import ToTensorV2
-from torch.utils.data import Dataset
 
 from .. import utils
+from .base_eqx_dataset import EqxDataset
 
 
-class FashionMNIST(Dataset):
+class FashionMNIST(EqxDataset):
     """
     Fashion-MNIST dataset.
 
@@ -38,7 +38,7 @@ class FashionMNIST(Dataset):
 
         # Initialize albumentations transforms
         if isinstance(albumentations_transform, dict):
-            compose_list: List[A.TransformType] = []
+            compose_list: List[A.TransformType] = []  # type: ignore
             for transform, params in albumentations_transform.items():
                 compose_list.append(utils.get_instance(transform, params))
             albumentations_transform = A.Compose(compose_list)

@@ -4,7 +4,6 @@ DataModule class for PyTorch Lightning
 
 from typing import Optional
 
-import numpy as np
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 
@@ -78,11 +77,6 @@ class DataModule(LightningDataModule):
         return DataLoader(
             self.data_train,
             **self.dataloader_params | self.train_dataloader_params,
-            worker_init_fn=lambda worker_id: np.random.seed(
-                # Makes sure that the random seed is different for each worker
-                np.random.get_state()[1][0]  # type: ignore
-                + worker_id
-            ),
             collate_fn=(
                 self.data_train.collate_fn
                 if hasattr(self.data_train, "collate_fn")
@@ -94,11 +88,6 @@ class DataModule(LightningDataModule):
         return DataLoader(
             self.data_val,
             **self.dataloader_params | self.val_dataloader_params,
-            worker_init_fn=lambda worker_id: np.random.seed(
-                # Makes sure that the random seed is different for each worker
-                np.random.get_state()[1][0]  # type: ignore
-                + worker_id
-            ),
             collate_fn=(
                 self.data_val.collate_fn
                 if hasattr(self.data_val, "collate_fn")
@@ -110,11 +99,6 @@ class DataModule(LightningDataModule):
         return DataLoader(
             self.data_test,
             **self.dataloader_params | self.test_dataloader_params,
-            worker_init_fn=lambda worker_id: np.random.seed(
-                # Makes sure that the random seed is different for each worker
-                np.random.get_state()[1][0]  # type: ignore
-                + worker_id
-            ),
             collate_fn=(
                 self.data_test.collate_fn
                 if hasattr(self.data_test, "collate_fn")

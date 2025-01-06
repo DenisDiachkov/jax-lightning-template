@@ -70,7 +70,7 @@ def main():
     This function is the main function.
     """
 
-    logging.info("pytorch-lightning-template: %s", __version__)
+    logging.info("jax-lightning-template: %s", __version__)
 
     cfg = parse_cfg()
     set_loglevel(cfg["loglevel"])

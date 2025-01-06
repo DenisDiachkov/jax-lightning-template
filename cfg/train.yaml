@@ -1,7 +1,7 @@
 mode: !!str "train"  # train or test
 wall: !!bool False  # If True, all warnings will be treated as errors 
 seed: !!int &seed 42  # Random seed
-experiment_name: &experiment_name <your experiment name> # Experiment name for WanDB logging and checkpoint saving (will be saved to ./experiments/*experiment_name*)
+experiment_name: &experiment_name jax_exp # Experiment name for WanDB logging and checkpoint saving (will be saved to ./experiments/*experiment_name*)
 version: &version 0
 resume_path:  # Checkpoint .ckpt path to resume the training
 no_logging: False  # If True, turns off the WanDB logging
@@ -11,17 +11,17 @@ environ_vars:  # System environment variables
   WANDB_SILENT: !!bool False
 
 logger_params:  # WanDB logger parameters
-  project: !!str "<your project name>"
+  project: !!str "jax_exp"
   name: *experiment_name
   version: null
   save_dir: "/tmp/wandb/"
  
 trainer_params:  # PyTorch Lightning trainer parameters. See more here: https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html
   deterministic: !!str "warn"
-  devices: [0, 1]
-  accelerator: !!str "cuda"
+  devices: 1
+  accelerator: !!str "cpu"
   num_sanity_val_steps: !!int 2
-  max_epochs: 100
+  max_epochs: 10000
   precision: 32
   limit_train_batches: null
   limit_val_batches: !!int 10
@@ -54,34 +54,38 @@ trainer_callbacks:  # PyTorch Lightning callbacks. See more here: https://pytorc
     },
   ]
 
-lightning_module: .module.BaseModule  # PyTorch Lightning module class
+lightning_module: .module.JaxLightningModule  # PyTorch Lightning module class
 lightning_module_params:  # PyTorch Lightning module parameters
-  model: .model.resnet.ResNet  # Torch model class
-  model_params:  # Torch model parameters
+  model: .model.resnet.ResNet  # Equinox model class
+  model_params:  # Equinox model parameters
     in_channels: !!int 1
     out_channels: !!int 64
     num_blocks: !!int 3
     num_classes: !!int 10
     
 
-  optimizer: torch.optim.AdamW  # Torch optimizer class
+  optimizer: optax.adam  # Torch optimizer class
   optimizer_params:  # Torch optimizer parameters
-    lr: !!float 0.001
+    learning_rate: !!float 0.1
+  # criterion: .criterion.ce_loss.CELossWithIntegerLabels  # Criterion class
+  # criterion_params: {}
   criterion: .criterion.multi_criterion.MultiCriterion  # Torch criterion class
   criterion_params:  # Torch criterion parameters
     {
       criterions:
         [
           {
-            criterion: torch.nn.CrossEntropyLoss,
+            criterion: .criterion.ce_loss.CELossWithIntegerLabels,  # Criterion class
             criterion_params: {}
           },
         ],
     }
-  scheduler: torch.optim.lr_scheduler.CosineAnnealingLR  # Torch scheduler class
-  scheduler_params:  # Torch scheduler parameters
-    T_max: !!int 100
-    eta_min: !!float 0.0001
+  lr_scheduler: null # optax.cosine_decay_schedule  # Torch scheduler class
+  lr_scheduler_params:  # Torch scheduler parameters
+    init_value: !!float 0.001
+    decay_steps: !!int 1000
+    alpha: !!float 0.0
+    exponent: !!float 0.5
   log_metrics_every_n_steps: *log_metrics_every_n_steps
 
 datamodule_params:  # PyTorch Lightning datamodule parameters (Implementation here: src/pytorch-lightning-template/dataset/datamodule.py)
@@ -97,7 +101,7 @@ datamodule_params:  # PyTorch Lightning datamodule parameters (Implementation he
       }
   dataloader_params:  # DataLoader parameters
     shuffle: !!bool True
-    num_workers: !!int 8
+    num_workers: !!int 1
     pin_memory: !!bool True
     persistent_workers: !!bool True
   train_dataloader_params:  # Parameters specific to the training dataloader (will override dataloader_params)
