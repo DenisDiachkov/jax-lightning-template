@@ -19,3 +19,4 @@ data/
 experiments/
 output.png
 lightning_logs/
+wandb/
