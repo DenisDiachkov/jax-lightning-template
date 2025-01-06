@@ -1,10 +1,11 @@
-# PyTorch Lightning Template
+# Jax/Equinox + PyTorch Lightning Template
 
-This repository provides a PyTorch Lightning-based training pipeline.
+This repository provides a PyTorch Lightning-based training pipeline with Jax/Equinox as a backend for modeling and optimization.
 
 ## Features
 
 - PyTorch Lightning integration.
+- Jax/Equinox backend for modeling and optimization.
 - WanDB integration for logging of metrics, code, and visualisation.
 - CI/CD via GitHub Actions.
   - Automated tests with examples.
@@ -112,7 +113,7 @@ Stick to git installation if you don't need CI/CD.
 mode: !!str "train"  # train or test
 wall: !!bool False  # If True, all warnings will be treated as errors 
 seed: !!int &seed 42  # Random seed
-experiment_name: &experiment_name <your experiment name> # Experiment name for WanDB logging and checkpoint saving (will be saved to ./experiments/*experiment_name*)
+experiment_name: &experiment_name jax_exp # Experiment name for WanDB logging and checkpoint saving (will be saved to ./experiments/*experiment_name*)
 version: &version 0
 resume_path:  # Checkpoint .ckpt path to resume the training
 no_logging: False  # If True, turns off the WanDB logging
@@ -122,17 +123,17 @@ environ_vars:  # System environment variables
   WANDB_SILENT: !!bool False
 
 logger_params:  # WanDB logger parameters
-  project: !!str "<your project name>"
+  project: !!str "jax_exp"
   name: *experiment_name
   version: null
   save_dir: "/tmp/wandb/"
  
 trainer_params:  # PyTorch Lightning trainer parameters. See more here: https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html
   deterministic: !!str "warn"
-  devices: [0, 1]
-  accelerator: !!str "cuda"
+  devices: 1
+  accelerator: !!str "cpu"
   num_sanity_val_steps: !!int 2
-  max_epochs: 100
+  max_epochs: 10000
   precision: 32
   limit_train_batches: null
   limit_val_batches: !!int 10
@@ -165,38 +166,41 @@ trainer_callbacks:  # PyTorch Lightning callbacks. See more here: https://pytorc
     },
   ]
 
-lightning_module: .module.BaseModule  # PyTorch Lightning module class
+lightning_module: .module.JaxLightningModule  # PyTorch Lightning module class
 lightning_module_params:  # PyTorch Lightning module parameters
-  model: .model.resnet.ResNet  # Torch model class
-  model_params:  # Torch model parameters
+  model: .model.resnet.ResNet  # Equinox model class
+  model_params:  # Equinox model parameters
     in_channels: !!int 1
     out_channels: !!int 64
     num_blocks: !!int 3
     num_classes: !!int 10
     
 
-  optimizer: torch.optim.AdamW  # Torch optimizer class
+  optimizer: optax.adam  # Optax optimizer class
   optimizer_params:  # Torch optimizer parameters
-    lr: !!float 0.001
+    learning_rate: !!float 0.1
+  # criterion: .criterion.ce_loss.CELossWithIntegerLabels  # Criterion class
+  # criterion_params: {}
   criterion: .criterion.multi_criterion.MultiCriterion  # Torch criterion class
   criterion_params:  # Torch criterion parameters
     {
       criterions:
         [
           {
-            criterion: torch.nn.CrossEntropyLoss,
+            criterion: .criterion.ce_loss.CELossWithIntegerLabels,  # Criterion class
             criterion_params: {}
           },
         ],
     }
-  scheduler: torch.optim.lr_scheduler.CosineAnnealingLR  # Torch scheduler class
-  scheduler_params:  # Torch scheduler parameters
-    T_max: !!int 100
-    eta_min: !!float 0.0001
+  lr_scheduler: null # optax.cosine_decay_schedule  # Torch scheduler class
+  lr_scheduler_params:  # Torch scheduler parameters
+    init_value: !!float 0.001
+    decay_steps: !!int 1000
+    alpha: !!float 0.0
+    exponent: !!float 0.5
   log_metrics_every_n_steps: *log_metrics_every_n_steps
-  visualization_every_n_steps: !!int 20
 
-datamodule_params:  # PyTorch Lightning datamodule parameters (Implementation here: src/pytorch_lightning_template/dataset/datamodule.py)
+datamodule_params:  # PyTorch Lightning datamodule parameters (Implementation here: src/pytorch-lightning-template/dataset/datamodule.py)
   dataset: .dataset.fashion_mnist.FashionMNIST
   dataset_params: {
     root: !!str './data',
@@ -204,14 +208,12 @@ datamodule_params:  # PyTorch Lightning datamodule parameters (Implementation he
   train_dataset_params:  # Parameters specific to the training dataset (will override dataset_params)
     albumentations_transform:  # Albumentation A.Compose components (see more here: https://albumentations.ai/docs/api_reference/core/composition/)
       {
-        albumentations.CropNonEmptyMaskIfExists:  # Augmentation class
-          { height: 512, width: 512, p: 1.0 }, # Augmentation parameters
         albumentations.HorizontalFlip: { p: 0.5 },
         albumentations.ShiftScaleRotate: { p: 0.2 },
       }
   dataloader_params:  # DataLoader parameters
     shuffle: !!bool True
-    num_workers: !!int 8
+    num_workers: !!int 1
     pin_memory: !!bool True
     persistent_workers: !!bool True
   train_dataloader_params:  # Parameters specific to the training dataloader (will override dataloader_params)
@@ -258,7 +260,7 @@ See [here](cfg/test.yaml)
 1. [Pull the Docker image](README.md#installation-from-docker) or [build it](README.md#docker-building-if-not-using-cicd).
 2. Run the Docker container:
    ```bash
-   docker run pytorch_lightning_template:0.1.0 -v <path to config file>:/cfg/config.yaml
+   docker run jax_lightning_template:0.1.0 -v <path to config file>:/cfg/config.yaml
    ```
 
 
